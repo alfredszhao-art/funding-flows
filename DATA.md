@@ -8,9 +8,9 @@ and the `retrieved_at` date of the snapshot it came from.
 
 | file | rows | generated? | what |
 |---|---|---|---|
-| `data/grants.csv` | 4,259 | **generated** by `scrapers/build_grants.py` | one row per disclosed grant |
+| `data/grants.csv` | 4,621 | **generated** by `scrapers/build_grants.py` | one row per disclosed grant |
 | `data/pipeline.csv` | 28 | hand-maintained | future money, with a `tier` (open_call / committed / capacity / projection) and `deadline` |
-| `data/sources.csv` | 21 | hand-maintained | the source registry + collection status |
+| `data/sources.csv` | 25 | hand-maintained | the source registry + collection status |
 | `data/movement_totals.csv` | 4 | hand-maintained | top-down whole-movement estimates |
 
 Do **not** edit `grants.csv` by hand — change the parser and rebuild.
@@ -19,7 +19,7 @@ Do **not** edit `grants.csv` by hand — change the parser and rebuild.
 
 | column | meaning |
 |---|---|
-| `id` | stable id, prefixed by source (`cg:…`, `cgtai:…`, `eafunds:…`, `manifund:…`, `sff:…`, `ace:…`, `acercf:…`, `fli:…`, `owa:…`) |
+| `id` | stable id, prefixed by source (`cg:…`, `cgtai:…`, `cggcr:…`, `sffic:…`, `nsf:…`, `eafunds:…`, `manifund:…`, `sff:…`, `ace:…`, `acercf:…`, `fli:…`, `owa:…`) |
 | `funder` | who gave the money (Coefficient Giving, EA Funds, SFF, ACE Movement Grants, ACE Recommended Charity Fund, Future of Life Institute, Manifund, Open Wing Alliance) |
 | `fund` | the specific fund / round (e.g. "Farm Animal Welfare", "Animal Welfare Fund", "SFF 2026 round") |
 | `grantee` | who received it |
@@ -41,12 +41,15 @@ Do **not** edit `grants.csv` by hand — change the parser and rebuild.
 |---|---|---|---|---|
 | Coefficient Giving (ex–Open Philanthropy) — Farm Animal Welfare | `cg` | 635 | 2016–2026 | **manual**: the page returns 403 to scripts, so the paginated table is read in a real browser → `data/raw/cg/faw.tsv` |
 | Coefficient Giving — Navigating Transformative AI | `cg_tai` | 639 | 2015–2026 | **manual**, same method → `data/raw/cg/tai.tsv`. 640 rows on the page; one that CG lists on both of its fund pages is kept only under the farm animal fund |
+| Coefficient Giving — Global Catastrophic Risks Opportunities | `cg_gcr` | 300 | 2015–2026 | **manual**, same method → `data/raw/cg/gcr.tsv`. A mixed fund, so each grant is classified: AI safety if the grantee or title mentions AI or the grantee is on the explicit list `CG_GCR_AI_ORGS` in `build_grants.py` (MATS, Pivotal, Kairos, BlueDot, Constellation, Lightcone, Meridian, Catalyze, Arcadia Impact, Future Impact Group, Trajectory Labs); animal if it names animals; otherwise `other` (EA community building, biosecurity, climate engineering) |
 | EA Funds (AWF / LTFF / EAIF / GHD) | `ea_funds` | 1,697 | 2017–2026 | official CSV API (`scrapers/fetch_ea_funds.py`) |
 | Survival and Flourishing Fund | `sff` | 634 | 2019–2026 (2020–2023 half-yearly) | HTML pages (`scrapers/fetch_html.py`) |
+| SFF Initiative Committee | `sff_ic` | 28 | 2024 | HTML table (`scrapers/fetch_html.py`): gifts and grants outside the main rounds, mostly Jaan Tallinn's |
 | Manifund | `manifund` | 278 | to 2026 | public JSON API; animal-welfare, falcon-fund and digital-minds causes, the AI causes (`tais`, `ai-gov`, `ais-fieldbuilding`, `ais-advocacy`, `grantmaking-ai`, `ai-worldviews`), `gcr` projects only when they are about AI, and a few animal projects filed under other causes (`scrapers/fetch_manifund.py`) |
 | ACE Movement Grants | `ace` | 153 | all rounds | HTML page (`scrapers/fetch_html.py`) |
 | ACE Recommended Charity Fund | `ace_rcf` | 64 | six rounds, Jan 2024 – Aug 2026 | HTML tables, one per round (`scrapers/fetch_html.py`). Dated by the month the money was paid out. The parser checks each round against the table's own Total row |
 | Future of Life Institute | `fli` | 131 | 2015–2026 | one HTML page per programme, 11 programmes (`scrapers/fetch_html.py`). Each programme's count equals the count its own page states. Programme pages with no year are dated from FLI's announcements: power concentration 2024 (review rounds Jul and Oct 2024), global-institutions designs 2024, multistakeholder 2025 (decisions Jun 2025), religious-projects RFP 2026 (deadline 2 Feb 2026) |
+| NSF Safe Learning-Enabled Systems | `nsf` | 34 | 2023–2025 | NSF Awards API (`scrapers/fetch_nsf.py`). Co-funded by Coefficient Giving, whose transfer to NSF is flagged as a regrant, so the money is counted once. Amount is funds obligated to date. The fetcher keeps organisation-level fields only: the API can ignore its field list and return researchers' emails and phone numbers |
 | Open Wing Alliance Grants 2026 | `owa` | 28 | 2026 | table in an EA Forum post (`scrapers/fetch_html.py`) |
 
 ## Checked and not usable (and why)
@@ -63,12 +66,15 @@ Looked at while searching for more animal-welfare data. Each is also in `data/so
 | Good Ventures grants database | the old address now redirects to a page with no list or CSV; archived pages stop around 2021 and mostly duplicate Coefficient Giving's list |
 | EA Funds payout reports | narrative highlights, not full lists; used only as a cross-check (see caveats) |
 | EA Funds Transformative AI fund page | no grant list on the page, and the EA Funds grants API has no records under that name (its AI grants are the Long-Term Future Fund's) |
+| Trace (trace.manifund.org) | a secondary aggregator ($13.7B in 3,519 funder × recipient × year records, no per-grant title or source link, large 'Unknown Recipients' blocks); used only as a coverage check. It shows funders with no grant list here (Longview about $420M, Macroscopic about $130M, Schmidt Sciences about $88M) and higher Coefficient Giving AI totals than our collection, so treat our CG AI figures as a lower bound |
+| vipulnaik/donations | 211,118 rows but none dated 2023 or later; the funders we track stop at 2018–2019, so it only helps with pre-2019 history |
+| ProPublica Nonprofit Explorer | returns financial summaries and PDF links, not filing XML; grant-level Schedule I data would need the IRS e-file bulk data |
 | UK AISI Alignment Project | over £27M to over 60 projects (2026), but no per-project list or amounts |
 | UK AISI Systemic Safety Grants | 20 seed grants of up to £200k; only a few awardees named, no amounts |
 | Schmidt Sciences AI Safety Science | 48 funded projects by title; no institutions or amounts |
 | AI Safety Fund (Frontier Model Forum) | two rounds (Nov 2024, Dec 2025); no grantee list with amounts on its own site |
 
-Still open: ProPublica 990 filings (recipient-side reconciliation) and the vipulnaik/donations repository (historical backfill).
+Leads still open: Cooperative AI Foundation grant summaries (the page renders in the browser only), Wild Animal Initiative grant announcements (per-grant amounts are inside individual blog posts), and 990-based data for private foundations such as Karuna.
 
 ## Deduplication & double-counting policy
 
@@ -88,11 +94,11 @@ Three distinct things, handled separately:
 
 2. **Regrants (money passed funder → funder).** A grant to an intermediary that
    re-grants the money is flagged `is_regrant = true` and **excluded from all
-   overview totals and charts** so it isn't counted twice. 21 rows are flagged
-   (18 of them in CG: the Navigation Fund Cage-Free Implementation Fund $10M +
+   overview totals and charts** so it isn't counted twice. 26 rows are flagged
+   (23 of them in CG: the Navigation Fund Cage-Free Implementation Fund $10M +
    $1.5M, Spring Innovation Fund $7.5M + $3.5M, Founders Pledge $1.8M, the AI &
    Animals Regranting Fund $100k, and other explicit regranting grants; plus the
-   Manifund Falcon Fund and 2 EA Funds regrants; and, on CG's AI fund, FAR AI's $12M "AI Safety Regranting", an NSF programme ($5M) and a Longview RFP ($4M), which are listed explicitly in `CG_TAI_PASSTHROUGH` so every flag can be audited). The grants table still shows
+   Manifund Falcon Fund and 2 EA Funds regrants; and, on CG's AI fund, FAR AI's $12M "AI Safety Regranting", an NSF programme ($5M) and a Longview RFP ($4M), which are listed explicitly in `CG_TAI_PASSTHROUGH` so every flag can be audited; plus five EA Funds regranting grants on CG's Global Catastrophic Risks fund, $24.3M). The grants table still shows
    them, marked.
 
 3. **Same grantee, different funders — NOT a duplicate.** 196 organisations

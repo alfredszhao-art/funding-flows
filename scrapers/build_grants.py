@@ -596,6 +596,153 @@ def parse_fli():
 
 
 # --------------------------------------------------------------------------
+# Coefficient Giving 'Global Catastrophic Risks Opportunities' fund (collected by hand in a browser).
+# The fund mixes AI safety field-building, EA community building, biosecurity, climate engineering and more.
+# A grant is filed under AI safety when its grantee or title mentions AI, or when the grantee is on the explicit
+# list below of organisations that work on AI safety; animal grants (strict keyword) go to animal welfare; the
+# rest is "other". Grants that are explicitly regranting are flagged and kept out of totals.
+# --------------------------------------------------------------------------
+CG_GCR_AI_ORGS = {
+    "mats research", "pivotal research", "kairos", "bluedot impact", "constellation", "lightcone infrastructure",
+    "meridian", "catalyze impact", "arcadia impact", "future impact group", "trajectory labs",
+}
+
+
+def parse_cg_gcr():
+    path = os.path.join(RAW, "cg", "gcr.tsv")
+    if not os.path.exists(path):
+        return []
+    seen = set()                       # rows that are also on CG's other two fund pages belong to those funds
+    for other in ("faw.tsv", "tai.tsv"):
+        p = os.path.join(RAW, "cg", other)
+        if os.path.exists(p):
+            with open(p, newline="", encoding="utf-8") as f:
+                seen |= {(collapse(r["grantee"]), collapse(r["title"]), r["date"], r["amount"]) for r in csv.DictReader(f, delimiter="\t")}
+    out = []
+    with open(path, newline="", encoding="utf-8") as f:
+        for i, r in enumerate(csv.DictReader(f, delimiter="\t")):
+            grantee, title, amt = collapse(r["grantee"]), collapse(r["title"]), C.parse_money(r["amount"])
+            if not grantee or not amt:
+                continue
+            if (grantee, title, r["date"], r["amount"]) in seen:
+                print(f"[cg_gcr] dropped duplicate also on another CG fund page: {grantee} | {clip(title, 40)}", file=sys.stderr)
+                continue
+            text = f"{grantee} {title}"
+            if STRICT_ANIMAL.search(text):
+                cause = C.CAUSE_ANIMAL
+            elif C.tag_cause(text) == C.CAUSE_AISAFETY or grantee.lower() in CG_GCR_AI_ORGS:
+                cause = C.CAUSE_AISAFETY
+            else:
+                cause = C.CAUSE_OTHER
+            date, prec = cg_date(r["date"])
+            out.append({
+                "id": f"cggcr:{date or i}:{i}",
+                "funder": "Coefficient Giving",
+                "fund": "Global Catastrophic Risks Opportunities",
+                "grantee": grantee,
+                "title": title,
+                "amount_usd": amt,
+                "date": date,
+                "date_precision": prec,
+                "year": date[:4] if date else "",
+                "cause_area": cause,
+                "tags": C.tags_join(C.tag_species(text), C.tag_ai(text)) if cause == C.CAUSE_ANIMAL else "",
+                "is_regrant": bool(re.search(r"regrant", title, re.I)),
+                "source_id": "cg_gcr",
+                "source_url": "https://coefficientgiving.org/funds/global-catastrophic-risks-opportunities/",
+                "retrieved_at": RETRIEVED,
+            })
+    return out
+
+
+# --------------------------------------------------------------------------
+# SFF Initiative Committee: gifts and grants made outside the main S-process rounds.
+# Columns: Year | Source | Organization | Amount | Receiving Entity | Purpose
+# --------------------------------------------------------------------------
+def parse_sff_ic():
+    path = os.path.join(RAW, "sff", "initiative_committee.html")
+    if not os.path.exists(path):
+        return []
+    h = open(path, encoding="utf-8", errors="ignore").read()
+    tbl = re.search(r"<table.*?</table>", h, re.S)
+    if not tbl:
+        return []
+    out = []
+    for n, tr in enumerate(re.findall(r"<tr[^>]*>(.*?)</tr>", tbl.group(0), re.S)):
+        c = [collapse(strip_html(x)) for x in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)]
+        if len(c) < 6 or c[0] == "Year":
+            continue
+        year, source, org, amount, entity, purpose = c[:6]
+        amt = C.parse_money(amount)
+        grantee = _sff_grantee(entity, org)
+        if not amt or not grantee or not re.fullmatch(r"\d{4}", year):
+            continue
+        text = f"{org} {purpose}"
+        cause = C.tag_cause(text)
+        if cause == C.CAUSE_OTHER:
+            cause = C.CAUSE_AISAFETY       # same broad SFF rule as the main rounds (see methodology)
+        out.append({
+            "id": f"sffic:{year}:{n}",
+            "funder": "SFF",
+            "fund": "SFF Initiative Committee",
+            "grantee": grantee,
+            "title": purpose or org,
+            "amount_usd": amt,
+            "date": f"{year}-01-01",
+            "date_precision": "year",
+            "year": year,
+            "cause_area": cause,
+            "tags": C.tags_join(C.tag_species(text), C.tag_region(text), C.tag_ai(text)),
+            "is_regrant": False,
+            "source_id": "sff_ic",
+            "source_url": "https://survivalandflourishing.fund/initiative-committee",
+            "retrieved_at": RETRIEVED,
+        })
+    return out
+
+
+# --------------------------------------------------------------------------
+# NSF Safe Learning-Enabled Systems (SLES) awards, from the public NSF Awards API (scrapers/fetch_nsf.py).
+# The programme is co-funded by Coefficient Giving; CG's transfer to NSF is flagged as a regrant on the CG side,
+# so these downstream awards are counted once, here. Amount = funds obligated to date.
+# --------------------------------------------------------------------------
+def parse_nsf_sles():
+    path = os.path.join(RAW, "nsf", "sles_awards.json")
+    if not os.path.exists(path):
+        return []
+    out = []
+    for a in json.load(open(path, encoding="utf-8")):
+        amt = C.parse_money(a.get("fundsObligatedAmt"))
+        name = collapse(a.get("awardeeName"))
+        if not amt or not name:
+            continue
+        if name.isupper():
+            name = name.title()
+        if name.lower().endswith(", the"):
+            name = "The " + name[:-5]
+        mo, dy, yr = a["startDate"].split("/")
+        title = re.sub(r"^Collaborative Research:\s*", "", collapse(a.get("title")))
+        out.append({
+            "id": f"nsf:{a['id']}",
+            "funder": "National Science Foundation",
+            "fund": "Safe Learning-Enabled Systems (co-funded by Coefficient Giving)",
+            "grantee": name,
+            "title": title,
+            "amount_usd": amt,
+            "date": f"{yr}-{mo}-{dy}",
+            "date_precision": "day",
+            "year": yr,
+            "cause_area": C.CAUSE_AISAFETY,
+            "tags": "",
+            "is_regrant": False,
+            "source_id": "nsf",
+            "source_url": f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={a['id']}",
+            "retrieved_at": RETRIEVED,
+        })
+    return out
+
+
+# --------------------------------------------------------------------------
 # Open Wing Alliance Grants 2026 (table embedded in an EA Forum post)
 # Columns: Organization | 2026 disbursement | Country and Region | Focus | Duration and award date
 # --------------------------------------------------------------------------
@@ -650,6 +797,9 @@ def main():
         ("ACE", parse_ace),
         ("CG", parse_cg),
         ("CG TAI", parse_cg_tai),
+        ("CG GCR", parse_cg_gcr),
+        ("SFF IC", parse_sff_ic),
+        ("NSF", parse_nsf_sles),
         ("ACE RCF", parse_ace_rcf),
         ("FLI", parse_fli),
         ("OWA", parse_owa),
