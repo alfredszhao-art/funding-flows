@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funding Flows — who funds animal welfare, and what is open now</title>
+<meta name="description" content="An open tracker of publicly disclosed animal-welfare grants, the funders behind them, and the calls open for applications.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='9' cy='20' r='4' fill='%232a78d6'/><circle cx='18' cy='13' r='6' fill='%232a78d6'/><circle cx='25' cy='22' r='3' fill='%23eb6834'/></svg>">
+<script>
+  try {
+    var q = /[?&]theme=(light|dark)/.exec(location.search);
+    var t = (q && q[1]) || localStorage.getItem("ff-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="#overview">Funding Flows</a>
+    <nav id="nav" aria-label="Sections">
+      <a href="#overview" data-view="overview" class="on">Overview</a>
+      <a href="#funders" data-view="funders">Funders</a>
+      <a href="#pipeline" data-view="pipeline">Pipeline</a>
+      <a href="#grants" data-view="grants">Grants</a>
+      <a href="#sources" data-view="sources">Sources</a>
+      <a href="#method" data-view="method">Method</a>
+    </nav>
+    <button id="theme" type="button" aria-label="Switch between light and dark">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- OVERVIEW -->
+  <section class="view on" id="v-overview">
+    <div class="hero">
+      <div class="eyebrow rise" style="--d:0">Funding tracker</div>
+      <div class="domain rise" id="domainSwitch" role="tablist" aria-label="Domain" style="--d:60">
+        <button class="dom on" type="button" role="tab" aria-selected="true" data-domain="animal_welfare">Animal welfare</button>
+        <button class="dom" type="button" role="tab" aria-selected="false" data-domain="ai_safety">AI safety</button>
+      </div>
+      <h1>
+        <span class="hero-num rise" id="heroNum" style="--d:120">$0</span>
+        <span class="hero-sub rise" id="heroSub" style="--d:300"></span>
+      </h1>
+      <div class="standfirst rise" id="heroText" style="--d:520"></div>
+    </div>
+
+    <div data-filters style="margin-top:52px"></div>
+
+    <section class="blk rv">
+      <h2 class="blk-t">Open now</h2>
+      <p class="blk-d">Calls you can apply to, nearest deadline first.</p>
+      <div id="openTeaser"></div>
+    </section>
+
+    <section class="blk rv">
+      <h2 class="blk-t">Every grant, as a dot</h2>
+      <p class="blk-d">One row per funder, time running left to right, each dot a single grant sized by its amount. Dots outside the chosen period fade back, so the recent money stands out against the history.</p>
+      <div class="key-row" id="swarmKey"></div>
+      <div class="chart" id="swarm"></div>
+      <p class="fine">Hover a dot for the grantee and purpose; click it to open the funder’s own record. Hollow rings are regrants — money passed on to another grantmaker, shown for transparency but never added to any total. Grants known only to the month, quarter or year are placed at the start of that period.</p>
+    </section>
+
+    <section class="blk rv">
+      <h2 class="blk-t">Year by year</h2>
+      <p class="blk-d">Disclosed grant volume by calendar year, for the causes selected above. The full history always shows here, whichever period is chosen.</p>
+      <div class="tools"><button class="t" id="tblBtn" type="button">Table view</button></div>
+      <div class="key-row" id="annualKey"></div>
+      <div class="chart annual" id="annual"></div>
+      <p class="fine" id="annualNote"></p>
+    </section>
+
+    <section class="blk rv" id="speciesBlk">
+      <h2 class="blk-t">Which animals</h2>
+      <p class="blk-d">Money in the chosen period, split by the species a grant’s title or grantee mentions.</p>
+      <div class="hb" id="species"></div>
+      <p class="fine">Species are read from grant text, so only grants that name one are counted, and a grant naming several counts for each. “Aquatic (general)” means fish welfare grants that do not name a species.</p>
+    </section>
+
+    <section class="blk rv" id="recipientsBlk" hidden>
+      <h2 class="blk-t">Biggest recipients</h2>
+      <p class="blk-d">Who received the most in the chosen period, across the causes selected above. Several grants to one organisation add up.</p>
+      <div class="hb wide" id="recipients"></div>
+      <p class="fine">Regrants are left out, and so are bundles the funder publishes as “Various individuals and organisations”. Fiscally sponsored projects appear under the name the funder published.</p>
+    </section>
+
+    <section class="blk rv" id="ctxBlk">
+      <h2 class="blk-t">How much of the whole is this?</h2>
+      <p class="blk-d">Published estimates of total movement spending, set against what this tracker can see in the same year.</p>
+      <div id="context"></div>
+    </section>
+  </section>
+
+  <!-- FUNDERS -->
+  <section class="view" id="v-funders">
+    <h1 class="page">Who funds what</h1>
+    <p class="lead">Each funder’s volume, typical grant, recent activity and focus, drawn only from grants they have disclosed. Open a row to see what they funded lately and whether they are taking applications.</p>
+    <div data-filters></div>
+    <div class="sortrow" id="fsort"></div>
+    <div id="ledger"></div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section class="view" id="v-pipeline">
+    <h1 class="page">What is coming next</h1>
+    <p class="lead">Forward-looking money, ordered by how actionable it is: calls you can answer today first, long-range projections last. Everything is a stated intention with a source and a confidence level — not a prediction, and not yet a grant.</p>
+    <div data-filters="causes"></div>
+    <div id="pipeBody"></div>
+  </section>
+
+  <!-- GRANTS -->
+  <section class="view" id="v-grants">
+    <h1 class="page">Every disclosed grant</h1>
+    <p class="lead">The full record behind the charts. Search by grantee or purpose; click a column to sort. Each amount links to the funder’s own page.</p>
+    <div data-filters></div>
+    <div class="gctl">
+      <input type="search" id="gq" placeholder="Search grantee or purpose" aria-label="Search grants">
+      <select id="gfunder" aria-label="Funder"><option value="">All funders</option></select>
+      <label><input type="checkbox" id="gregrant"> Hide regrants</label>
+      <span class="gcount" id="gcount"></span>
+    </div>
+    <div class="gwrap">
+      <table class="g" id="gtable">
+        <thead><tr>
+          <th data-sort="date">Date</th><th data-sort="funder">Funder</th><th data-sort="grantee">Grantee</th>
+          <th data-sort="title">Purpose</th><th data-sort="cause">Cause</th><th class="r" data-sort="amount">Amount</th>
+        </tr></thead>
+        <tbody id="gbody"></tbody>
+      </table>
+    </div>
+    <div class="pager" id="pager"></div>
+  </section>
+
+  <!-- SOURCES -->
+  <section class="view" id="v-sources">
+    <h1 class="page">Where the data comes from</h1>
+    <p class="lead">Every figure traces to a public page. Each grant row carries its source link and the date the snapshot was taken.</p>
+    <div class="srows" id="srows"></div>
+  </section>
+
+  <!-- METHOD -->
+  <section class="view" id="v-method">
+    <h1 class="page">Method and limits</h1>
+    <div class="prose" id="methodBody"></div>
+  </section>
+</main>
+
+<footer id="foot"></footer>
+<div id="tip" role="tooltip"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

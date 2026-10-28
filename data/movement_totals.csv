@@ -1,0 +1,5 @@
+year,scope,amount_usd_estimate,method,source,source_url,notes
+2020,Global farmed animal advocacy,200000000,top_down,Farmed Animal Funders (2021 report on 2020 spending),https://forum.effectivealtruism.org/posts/FxZdQJXs45fTFnMEe/is-ea-underfunding-animal-advocacy-according-to-our-own,~$200M; roughly 80% went to North America and Europe.
+2024,Global animal advocacy,259600000,bottom_up,"Stray Dog Institute, State of the Movement 2024",https://straydoginstitute.org/state-of-the-movement-2024,"$259.6M across 211 orgs in 50 countries; North America + Europe = 94%; chickens 26%, aquatic animals 11%."
+2025,CG farm-animal share of grantmaking,9,share_pct,ElliotTep (EA Forum),https://forum.effectivealtruism.org/posts/FxZdQJXs45fTFnMEe/is-ea-underfunding-animal-advocacy-according-to-our-own,"Coefficient Giving put ~9% of its grantmaking into farm animals in 2025."
+2025,Animal share of EA funding,7,share_pct,ElliotTep (EA Forum),https://forum.effectivealtruism.org/posts/FxZdQJXs45fTFnMEe/is-ea-underfunding-animal-advocacy-according-to-our-own,"Animals receive ~7% of overall EA funding despite a much larger estimated share of the impact."
